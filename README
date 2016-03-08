@@ -1,0 +1,3 @@
+gotestit is intended to be a testing framework that lets people run arbitrary tests against Docker images. Currently work is focusing on running unit tests, but in the future it may be possible to do integration tests.
+
+this repo is still a work in progress, watch for current development
