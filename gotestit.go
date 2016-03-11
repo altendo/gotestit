@@ -2,8 +2,8 @@ package main
 
 import(
     "os"
+    "io"
     "log"
-    "bytes"
     "time"
     "os/exec"
     "encoding/json"
@@ -18,37 +18,41 @@ type ExecutableJob struct {
     CronExp     string `json:"cronexp"`
     Script      string `json:"script"`
     Args        string `json:"args"`
+    StdoutPath  string `json:"stdoutPath"`
+    StderrPath  string `json:"stderrPath"`
+
+    Stdout      io.WriteCloser `json:"-"`
+    Stderr      io.WriteCloser `json:"-"`
 }
 
 func (ej *ExecutableJob) Run() {
+
     cmd := exec.Command(ej.Script, ej.Args)
-    out, err := cmd.CombinedOutput()
+
+    cmd.Stdout = ej.Stdout
+    cmd.Stderr = ej.Stderr
+
+    err := cmd.Run()
 
     if err != nil {
-        log.Fatal(err)
+        log.Fatal("error running command: ", err)
     }
 
-    buffer := bytes.NewBuffer(out)
-    str, err := buffer.ReadString(byte('\n'))
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    log.Print(str)
 }
 
 func main() {
 
     c = cron.New()
 
+    // open the file
     configPath := "test.json"
-
     file, err := os.Open(configPath)
 
     if err != nil {
         log.Fatal("error opening config file,", err)
     }
 
+    // parse the config
     var ej *ExecutableJob
     decoder := json.NewDecoder(file)
 
@@ -57,11 +61,26 @@ func main() {
         log.Fatal("error decoding job information,", err)
     }
 
+    // change the job to write out to custom stderr/stdout
+    if outFile, err := os.OpenFile(ej.StdoutPath, os.O_APPEND|os.O_CREATE, 0644); err != nil {
+        log.Fatal("unable to open stdout for writing: ", err)
+    } else {
+        ej.Stdout = outFile
+    }
+
+    if errFile, err := os.OpenFile(ej.StderrPath, os.O_APPEND|os.O_CREATE, 0644); err != nil {
+        log.Fatal("unable to open stderr for writing: ", err)
+    } else {
+        ej.Stderr = errFile
+    }
+
+    // add the job to the queue
     c.AddJob(ej.CronExp, ej)
     c.Start()
 
     defer c.Stop()
 
+    // let it ride
     for {
         time.Sleep(5000 * time.Millisecond)
     }
