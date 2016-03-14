@@ -21,8 +21,8 @@ type ExecutableJob struct {
     StdoutPath  string `json:"stdoutPath"`
     StderrPath  string `json:"stderrPath"`
 
-    Stdout      io.WriteCloser `json:"-"`
-    Stderr      io.WriteCloser `json:"-"`
+    Stdout      io.Writer `json:"-"`
+    Stderr      io.Writer `json:"-"`
 }
 
 func (ej *ExecutableJob) Run() {
@@ -62,13 +62,13 @@ func main() {
     }
 
     // change the job to write out to custom stderr/stdout
-    if outFile, err := os.OpenFile(ej.StdoutPath, os.O_APPEND|os.O_CREATE, 0644); err != nil {
+    if outFile, err := os.OpenFile(ej.StdoutPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644); err != nil {
         log.Fatal("unable to open stdout for writing: ", err)
     } else {
         ej.Stdout = outFile
     }
 
-    if errFile, err := os.OpenFile(ej.StderrPath, os.O_APPEND|os.O_CREATE, 0644); err != nil {
+    if errFile, err := os.OpenFile(ej.StderrPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644); err != nil {
         log.Fatal("unable to open stderr for writing: ", err)
     } else {
         ej.Stderr = errFile
