@@ -45,7 +45,7 @@ func (ej *ExecutableJob) Run() {
  * In the future, we may want to open configs in separate goroutines, but
  * keep it serialized for now (version 2 or 3 feature?)
  */
-func openJobConfig(path string) *ExecutableJob {
+func openJobConfig(path string) (*ExecutableJob, error) {
 
     file, err := os.Open(path)
     defer file.Close()
@@ -60,7 +60,7 @@ func openJobConfig(path string) *ExecutableJob {
 
     err = decoder.Decode(&ej)
     if err != nil {
-        log.Fatal("error decoding job information: ", err)
+        return nil, err
     }
 
     openFileFlags := os.O_RDWR|os.O_APPEND|os.O_CREATE
@@ -68,18 +68,18 @@ func openJobConfig(path string) *ExecutableJob {
 
     // change the job to write out to custom stderr/stdout
     if outFile, err := os.OpenFile(ej.StdoutPath, openFileFlags, openFilePerms); err != nil {
-        log.Fatal("unable to open stdout for writing: ", err)
+        log.Println("unable to open stdout for writing: ", err)
     } else {
         ej.Stdout = outFile
     }
 
     if errFile, err := os.OpenFile(ej.StderrPath, openFileFlags, openFilePerms); err != nil {
-        log.Fatal("unable to open stderr for writing: ", err)
+        log.Println("unable to open stderr for writing: ", err)
     } else {
         ej.Stderr = errFile
     }
 
-    return ej
+    return ej, nil
 
 }
 
@@ -102,8 +102,12 @@ func main() {
 
     for _, filename := range filenames {
         // add the job to the queue
-        job := openJobConfig(filepath.Join(configDirPath, filename))
-        c.AddJob(job.CronExp, job)
+        jobConfig := filepath.Join(configDirPath, filename)
+        if job, err := openJobConfig(jobConfig); err !=  nil {
+            log.Printf("error decoding job information for %s: %s", jobConfig, err)
+        } else {
+            c.AddJob(job.CronExp, job)
+        }
     }
 
     c.Start()
