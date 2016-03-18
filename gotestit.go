@@ -4,6 +4,7 @@ import(
     "os"
     "io"
     "log"
+    "fmt"
     "time"
     "os/exec"
     "path/filepath"
@@ -13,6 +14,14 @@ import(
 )
 
 var c *cron.Cron
+var eventStream chan *CronEvent
+
+type CronEvent struct {
+    EventJob        string
+    EventTime       time.Time
+    EventStatus     string
+    EventMessage    string
+}
 
 type ExecutableJob struct {
     Name        string `json:"name"`
@@ -35,9 +44,21 @@ func (ej *ExecutableJob) Run() {
 
     err := cmd.Run()
 
-    if err != nil {
-        log.Fatal("error running command: ", err)
+    event := &CronEvent{
+        EventJob: ej.Name,
+        EventTime: time.Now(),
+        EventStatus: "success",
+        EventMessage: "",
     }
+
+    if err != nil {
+        event.EventStatus = "failure"
+        event.EventMessage = fmt.Sprintf("error executing %s: %s", ej.Name, err)
+    } else {
+        event.EventMessage = fmt.Sprintf("successfully ran %s", ej.Name)
+    }
+
+    eventStream <-event
 
 }
 
@@ -87,6 +108,7 @@ func main() {
 
     c = cron.New()
     defer c.Stop()
+    eventStream = make(chan *CronEvent)
 
     configDirPath := "/home/nickantonelli/gotestit.d"
     // open the file
@@ -114,8 +136,18 @@ func main() {
 
     // let it ride
     for {
-        time.Sleep(5000 * time.Millisecond)
+        select {
+        case event, ok := <-eventStream:
+            if !ok {
+                // not sure how we got here, maybe we caught a signal
+                break
+            }
+            if event.EventStatus == "success" {
+                fmt.Printf("%s did a thing: %s\n", event.EventJob, event.EventMessage)
+            } else {
+                fmt.Printf("%s failed to do a thing: %s\n", event.EventJob, event.EventMessage)
+            }
+        }
     }
-
 }
 
