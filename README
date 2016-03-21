@@ -1,3 +1,10 @@
-gotestit is intended to be a testing framework that lets people run arbitrary tests against Docker images. Currently work is focusing on running unit tests, but in the future it may be possible to do integration tests.
+gotestit is a small program that runs arbitrary programs on a cron-like schedule. The initial inspiration was based on an extremely hacky smoke test framework that I used at a company once that would run a series of bash scripts in certain directories on certain time intervals (every 15 min, every hour, every day, every week, etc). I wanted to build on that and add functionality to the idea.
 
-this repo is still a work in progress, watch for current development
+As of right now, this really is doing much of the same job as cron and the old framework (the main improvement is the introduction of a config file for jobs), but I'd like to expand it to build in a few small bits of functionality that the old framework had, plus some new ones:
+
+* email specified addresses when a job fails
+* spin up a Docker container, run command in container, then get results from it
+* finer-grained locking: specify logging format, or stream logs over the network
+
+
+This repo is still a work in progress, watch for current development. Pull requests are encouraged!
