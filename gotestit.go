@@ -123,15 +123,15 @@ func main() {
 	eventStream = make(chan *CronEvent)
 
 	// open the file
-	dir, err := os.Open(cmdFlagConfigDir)
+	dir, err := os.Open(cmdFlagConfigDirPath)
 	if err != nil {
 		log.Fatal("unable to open config directory for parsing: ", err)
 	}
 
 	if stat, err := dir.Stat(); err != nil {
-		log.Fatal("unable to stat "+cmdFlagConfigDir+", error: ", err)
+		log.Fatal("unable to stat "+cmdFlagConfigDirPath+", error: ", err)
 	} else if !stat.IsDir() {
-		log.Fatal(cmdFlagConfigDir + " is not a valid directory")
+		log.Fatal(cmdFlagConfigDirPath + " is not a valid directory")
 	}
 
 	filenames, err := dir.Readdirnames(0)
@@ -143,7 +143,7 @@ func main() {
 
 	for _, filename := range filenames {
 		// add the job to the queue
-		jobConfig := filepath.Join(cmdFlagConfigDir, filename)
+		jobConfig := filepath.Join(cmdFlagConfigDirPath, filename)
 
 		if hasSuffix := strings.HasSuffix(jobConfig, "json"); !hasSuffix {
 			continue
